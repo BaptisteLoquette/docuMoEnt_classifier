@@ -13,6 +13,14 @@ Multi Label Document Classifier using different methods of training and inferenc
 - Eval Batch Size : 16
  
 #### Training Results :
+- **Val Accuracy :**
+
+  !["train_loss"](https://github.com/BaptisteLoquette/docuMoEnt_classifier/blob/main/images/val_acc.png) 
+- **Train Loss :**
+ !["train_loss"](https://github.com/BaptisteLoquette/docuMoEnt_classifier/blob/main/images/train_loss.png)
+
+- **Learning Rate Schedule :**
+ !["lr"](https://github.com/BaptisteLoquette/docuMoEnt_classifier/blob/main/images/Learning_rate.png)
 
 ### MoE BERT Classifier :
 Incoming...
@@ -22,8 +30,6 @@ Method :
 - Apply the weights from the gating model to each Expert's output
 - Taking the argmax of the weighted outputs of the Experts
 - Train the Experts and the Gating model together on the full dataset
-
-
 
 ## Inference
 The inference can be ran using different methods depending on the length of the document :
