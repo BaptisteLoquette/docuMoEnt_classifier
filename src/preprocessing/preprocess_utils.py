@@ -46,7 +46,7 @@ def preprocess_save_ag_news_for_BC(tokenizer:BertTokenizer, path_out:str, sampli
     sampled_dsets   =   concatenate_datasets(sampled_dsets)
 
     for id_label in labels:
-        expert_dset =   sampled_dsets.map(prepare_dataset_for_BC, fn_kwargs={"tokenizer" : tokenizer, "label" : id_label})
+        expert_dset =   sampled_dsets.map(prepare_dataset_for_BC, fn_kwargs={"tokenizer" : tokenizer, "label" : id_label}, remove_columns=["text"])
         expert_dset =   expert_dset.train_test_split(0.1).shuffle()
         ## Save dataset
         category    =   id2label_ag_news[id_label]
@@ -61,7 +61,7 @@ def preprocess_save_ag_news_for_BC(tokenizer:BertTokenizer, path_out:str, sampli
     'val': ag_news['test']['test']})
 
     full_ag_news    =   full_ag_news.map(tokenize_func_ag_news_for_MoE, fn_kwargs={"tokenizer" : tokenizer}, remove_columns=["text"])
-    full_ag_news.save_to_disk(save_path)
+    full_ag_news.save_to_disk(path_out)
 
 def tokenize_func_ag_news(sample, tokenizer:BertTokenizer) -> dict:
     """Preprocess each sample's text Tokenizes a sample"""
