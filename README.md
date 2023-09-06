@@ -43,3 +43,4 @@ The inference can be ran using different methods depending on the length of the 
 - Training on a larger dataset
 - Training on more epochs
 - Using a larger BERT model
+- Fine-Tuning BERT model summarizer
