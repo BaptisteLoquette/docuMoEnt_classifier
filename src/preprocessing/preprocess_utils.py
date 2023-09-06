@@ -1,6 +1,8 @@
 from typing import List
 import re
 import os
+from torch import Tensor
+from torch.nn.functional import one_hot
 from transformers import BertTokenizer
 from datasets import load_dataset, concatenate_datasets, DatasetDict
 
@@ -16,10 +18,22 @@ def prepare_dataset_for_BC(sample, tokenizer, label):
 
     return sample
 
-def preprocess_save_ag_news_for_BC(tokenizer, path_out, sampling_prop=1/3):
+def tokenize_func_ag_news_for_MoE(sample, tokenizer:BertTokenizer) -> dict:
+    """Preprocess each sample's text Tokenizes a sample, assign the label as a one hot vector for Multi-Label Classification"""
+    text        =   sample['text'].encode('ascii', 'ignore').decode('ascii') # Format to ASCII
+    text        =   re.sub('http://\S+|https://\S+', '', text)  # Remove urls
+    tokenized   =   tokenizer.encode_plus(text, max_length=512, padding="max_length", truncation=True)
+    sample['input_ids']         =   tokenized['input_ids']
+    sample['attention_mask']    =   tokenized['attention_mask']
+    sample['token_type_ids']    =   tokenized['token_type_ids']
+    sample['label']             =   one_hot(Tensor([sample['label']]).long()[0], num_classes=4)
+    return tokenized
+
+def preprocess_save_ag_news_for_BC(tokenizer:BertTokenizer, path_out:str, sampling_prop=1/3) -> None:
     """Form 4 datasets, from the 4 classes, for Binary classification (to train the experts)
         1. Sample a balanced subset of each category of Ag News to train the experts on
         2. Makes one dataset for each expert to be trained on 
+        3. Tokenizes and one hot encoding the full ag_news dataset to train the full mixture of expert on
     """
     sampled_dsets   =   []
     ag_news =   load_dataset('ag_news')
@@ -37,7 +51,17 @@ def preprocess_save_ag_news_for_BC(tokenizer, path_out, sampling_prop=1/3):
         ## Save dataset
         category    =   id2label_ag_news[id_label]
         save_path   =   os.path.join(path_out, f"ag_news_{re.sub('/', '_', category)}")
-        expert_dset.save_to_disk(os.path.join(path_out, f"ag_news_{id2label_ag_news[id_label]}"))
+        expert_dset.save_to_disk(save_path)
+    
+    ag_news['test'] =   ag_news['test'].train_test_split(0.2).shuffle()   # Create validation dataset
+    ## Reformat dataset to be nicer
+    full_ag_news    =   DatasetDict({
+    'train': ag_news['train'],
+    'test': ag_news['test']['train'],
+    'val': ag_news['test']['test']})
+
+    full_ag_news    =   full_ag_news.map(tokenize_func_ag_news_for_MoE, fn_kwargs={"tokenizer" : tokenizer}, remove_columns=["text"])
+    full_ag_news.save_to_disk(save_path)
 
 def tokenize_func_ag_news(sample, tokenizer:BertTokenizer) -> dict:
     """Preprocess each sample's text Tokenizes a sample"""
