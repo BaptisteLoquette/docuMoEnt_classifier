@@ -23,20 +23,22 @@ Multi Label Document Classifier using different methods of training and inferenc
  !["lr"](https://github.com/BaptisteLoquette/docuMoEnt_classifier/blob/main/images/Learning_rate.png)
 
 ### MoE BERT Classifier :
-Incoming...
-Method :
-- Train `n` BERT Experts models, for Binary Classification, on subsets of the `n` categories, respectively
-- Implement a BERT model + Linear layer + Softmax, as the gating model that outputs `n` values (one for each expert)
-- Apply the weights from the gating model to each Expert's output
-- Taking the argmax of the weighted outputs of the Experts
-- Train the Experts and the Gating model together on the full dataset
+
+#### MoE with Gating
+ Incoming...
+ Method :
+ - Train `n` BERT Experts models, for Binary Classification, on subsets of the `n` categories, respectively
+ - Implement a BERT model + Linear layer + Softmax, as the gating model that outputs `n` weights (one for each expert)
+ - Apply the weights from the gating model to each Expert's output
+ - Taking the argmax of the weighted outputs of the Experts
+ - Train the Experts and the Gating model together on the full dataset
 
 ## Inference
 The inference can be ran using different methods depending on the length of the document :
 
 - On the first 512 tokens of the document
 - Using extractive summarization, by finding the optimal number of sentences of the summary (for long documents)
-- By classifying each chunk of the document then aggregating (for long documents)
+- By classifying each chunk of the document then aggregating the predictions (for long documents)
 
 
 ## Possible improvements :
