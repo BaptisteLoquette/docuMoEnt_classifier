@@ -1,0 +1,5 @@
+datasets='2.4.0'
+transformers='4.21.3'
+evaluate='0.4.0'
+nltk='3.7'
+bert-extractive-summarizer
