@@ -61,7 +61,7 @@ def preprocess_save_ag_news_for_BC(tokenizer:BertTokenizer, path_out:str, sampli
     'val': ag_news['test']['test']})
 
     full_ag_news    =   full_ag_news.map(tokenize_func_ag_news_for_MoE, fn_kwargs={"tokenizer" : tokenizer}, remove_columns=["text"])
-    full_ag_news.save_to_disk(path_out)
+    full_ag_news.save_to_disk(os.path.join(path_out, "ag_news_full"))
 
 def tokenize_func_ag_news(sample, tokenizer:BertTokenizer) -> dict:
     """Preprocess each sample's text Tokenizes a sample"""
