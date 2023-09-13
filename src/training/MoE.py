@@ -1,7 +1,10 @@
 import torch
+import evaluate
 import torch.nn as nn
 from torch import Tensor
-from transformers import BertModel, BertModel
+import pytorch_lightning as pl
+from torch.utils.data import DataLoader
+from transformers import BertModel, BertModel, AdamW
 
 class MoE_MultiLabelClassification(nn.Module):
     """
@@ -83,3 +86,69 @@ class MoE_MultiLabelClassification(nn.Module):
         prob_gating =   self.softmax(gating_out)
 
         return prob_gating
+
+
+class MoE_Trainer(pl.LightningModule):
+    """Trainer Class for the Mixture Of Expert. (Right now without lr schedule)"""
+    def __init__(self, batch_size:int, moe_model:nn.Module, dset, warmup_prop=0.1, weight_decay=0.01, lr=5e-6):
+        super(MoE_Trainer, self).__init__()
+        self.moe_model  =   moe_model
+        self.loss       =   nn.CrossEntropyLoss()
+
+        # Create the DataLoaders
+        self.train_loader   =   DataLoader(dset["train"], batch_size=batch_size, shuffle=True)
+        self.val_loader     =   DataLoader(dset["val"], batch_size=batch_size, shuffle=True)
+
+        self.metric         =   evaluate.load("accuracy")   # Load the metric (for now only accuracy)
+
+        self.warmup_prop    =   warmup_prop
+        self.weight_decay   =   weight_decay
+        self.lr             =   lr
+    
+    def forward(self, input_ids:Tensor, attn_mask:Tensor, token_type_ids=None) -> Tensor:
+        out_moe =   self.moe_model(input_ids=input_ids, attn_mask=attn_mask, token_type_ids=token_type_ids)
+
+        return out_moe
+    
+    def training_step(self, batch, batch_idx):
+        outputs =   self.forward(
+            input_ids=batch['input_ids'],
+            attn_mask=batch['attention_mask'],
+            token_type_ids=batch['token_type_ids']
+        )
+        
+        loss    =   self.loss(outputs, batch['label'].float())
+
+        self.log('train/loss', loss, prog_bar=True, on_step=True, on_epoch=True)
+
+        return loss
+    
+    def validation_step(self, batch, batch_idx):
+        outputs =   self.forward(
+            input_ids=batch['input_ids'],
+            attn_mask=batch['attention_mask'],
+            token_type_ids=batch['token_type_ids']
+        )
+
+        argmax_preds    =   nn.functional.softmax(outputs.float(), dim=1).argmax(dim=1)
+        argmax_gt       =   batch['label'].float().argmax(dim=1)
+        acc             =   self.metric.compute(predictions=argmax_preds, references=argmax_gt)
+
+        loss    =   self.loss(outputs, batch['label'].float())
+
+        self.log('val/loss', loss, prog_bar=True, on_step=True, on_epoch=True)
+        self.log('val/metric', acc['accuracy'], prog_bar=True, on_step=True, on_epoch=True)
+
+        return loss
+    
+    def train_dataloader(self):
+        return self.train_loader
+    
+    def val_dataloader(self):
+        return self.val_loader
+    
+    def configure_optimizers(self):
+        model       =   self.moe_model
+        optimizer   =   AdamW(model.parameters(), lr=self.lr, eps=1e-8)
+        
+        return optimizer
