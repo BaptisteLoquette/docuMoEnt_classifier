@@ -14,7 +14,7 @@ parser.add_argument('--dset_path', help="Output dir of the preprocessed files", 
 parser.add_argument('--path_out', help="Output dir of the preprocessed files", type=str, default="../models/Bert_multi_label_document_classifier")
 parser.add_argument('--learning_rate', help="Learning Rate", type=float, default=5e-6)
 parser.add_argument('--num_labels', help="Number of labels", type=int, default=4)
-parser.add_argument('--num_epochs', help="Number of labels", type=int, default=2)
+parser.add_argument('--num_epochs', help="Number of epochs", type=int, default=2)
 
 if __name__ == "__main__":
     args        =   parser.parse_args()
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         learning_rate=lr,
         warmup_ratio=0.1,
         evaluation_strategy='steps',
-        eval_steps=1000,
+        eval_steps=int(0.2 * len(dset["train"])),
         num_train_epochs=num_epochs,
         logging_dir=f"logs/{path_out}",
         logging_strategy="steps",
@@ -54,4 +54,4 @@ if __name__ == "__main__":
         )
     
     trainer.train()
-    trainer.model.save(os.join(path_out, "model"))  # Saving model
+    trainer.model.save(os.path.join(path_out, "model"))  # Saving model
