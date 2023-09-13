@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch import Tensor
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
-from transformers import BertModel, BertModel, AdamW
+from transformers import BertModel, BertModel, AdamW, get_linear_schedule_with_warmup
 
 class MoE_MultiLabelClassification(nn.Module):
     """
@@ -90,7 +90,17 @@ class MoE_MultiLabelClassification(nn.Module):
 
 class MoE_Trainer(pl.LightningModule):
     """Trainer Class for the Mixture Of Expert. (Right now without lr schedule)"""
-    def __init__(self, batch_size:int, moe_model:nn.Module, dset, warmup_prop=0.1, weight_decay=0.01, lr=5e-6):
+    def __init__(self, moe_model:MoE_MultiLabelClassification, batch_size:int, dset, n_epochs=1, warmup_prop=0.1, weight_decay=0.01, lr=5e-6) -> None:
+        """
+        Params :
+            - batch_size
+            - moe_model : The Mixture of Expert model
+            - dset : The dataset
+            - n_epochs : The number of epochs to train the model
+            - warmup_prop : The proportion of the number of training steps to do warmup for the scheduler (if 0 or None -> No lr scheduler)
+            - weight_decay
+            - lr : The learning rate
+        """
         super(MoE_Trainer, self).__init__()
         self.moe_model  =   moe_model
         self.loss       =   nn.CrossEntropyLoss()
@@ -104,6 +114,7 @@ class MoE_Trainer(pl.LightningModule):
         self.warmup_prop    =   warmup_prop
         self.weight_decay   =   weight_decay
         self.lr             =   lr
+        self.n_epochs       =   n_epochs
     
     def forward(self, input_ids:Tensor, attn_mask:Tensor, token_type_ids=None) -> Tensor:
         out_moe =   self.moe_model(input_ids=input_ids, attn_mask=attn_mask, token_type_ids=token_type_ids)
@@ -150,5 +161,18 @@ class MoE_Trainer(pl.LightningModule):
     def configure_optimizers(self):
         model       =   self.moe_model
         optimizer   =   AdamW(model.parameters(), lr=self.lr, eps=1e-8)
+
+        if self.warmup_prop is not None or self.warmup_prop != 0.0:
+            scheduler   =   get_linear_schedule_with_warmup(optimizer,
+                                                                    num_warmup_steps=int(self.warmup_prop*len(self.train_loader)*self.n_epochs),
+                                                                    num_training_steps=len(self.train_loader))  # Init LR with warmup scheduler
+            scheduler = {
+                        'scheduler': scheduler,
+                        'interval': 'step',
+                        'frequency' : 1
+                    }
+            
+            return [optimizer], [scheduler]
         
-        return optimizer
+        else:
+            return [optimizer]
