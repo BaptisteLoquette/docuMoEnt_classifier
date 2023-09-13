@@ -28,9 +28,8 @@ Multi Label Document Classifier using different methods of training and inferenc
  Incoming...
  Method :
  - Train `n` BERT Experts models, for Binary Classification, on subsets of the `n` categories, respectively
- - Implement a BERT model + Linear layer + Softmax, as the gating model that outputs `n` weights (one for each expert)
+ - Implement a BERT model + Linear layers + Softmax, as the gating model that outputs `n` weights (one for each expert)
  - Apply the weights from the gating model to each Expert's output
- - Taking the argmax of the weighted outputs of the Experts
  - Train the Experts and the Gating model together on the full dataset
 
 ## Inference
